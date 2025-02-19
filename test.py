@@ -3,65 +3,65 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import yfinance as yf
 
-# Função para obter dados
-def obter_dados(ativos, num_candles, timeframe):
-    dados_completos = pd.DataFrame()
+# Function to get data
+def get_data(assets, num_candles, timeframe):
+    complete_data = pd.DataFrame()
 
-    for ativo in ativos:
-        dados_ativo = yf.download(tickers = ativo, interval = timeframe, period = num_candles)
-        df_ativo = pd.DataFrame(dados_ativo)
-        df_ativo['volatilidade'] = df_ativo['High'] - df_ativo['Low']
-        df_ativo['timeframe'] = f'{ativo}_{timeframe}'
+    for asset in assets:
+        asset_data = yf.download(tickers=asset, interval=timeframe, period=num_candles)
+        df_asset = pd.DataFrame(asset_data)
+        df_asset['volatility'] = df_asset['High'] - df_asset['Low']
+        df_asset['timeframe'] = f'{asset}_{timeframe}'
 
-        dados_completos = pd.concat([dados_completos, df_ativo])
+        complete_data = pd.concat([complete_data, df_asset])
 
-# Calculando a média e desvio padrão da volatilidade para cada ativo e período
-    dados_completos['media_volatilidade'] = dados_completos['volatilidade'].mean()
-    dados_completos['desvio_padrao_volatilidade'] = dados_completos['volatilidade'].std()
-    dados_completos.reset_index(drop=True, inplace=True)
+    # Calculating the mean and standard deviation of volatility for each asset and period
+    complete_data['volatility_mean'] = complete_data['volatility'].mean()
+    complete_data['volatility_std_dev'] = complete_data['volatility'].std()
+    complete_data.reset_index(drop=True, inplace=True)
 
-    return dados_completos
+    return complete_data
 
-# Interface Streamlit
-st.title("Coleta de Dados MT5")  
+# Streamlit interface
+st.title("MT5 Data Collection")  
 
-# Configurações do usuário
-num_candles = st.selectbox("Escolha o período de visualização:", ['1d', '5d', '1mo', '3mo', '6mo','1y', '2y', '5y', '10y'])
-ativo_escolhido = st.selectbox("Escolha o ativo:", ['EURUSD=X','USDBRL=X','^BVSP', 'USDJPY=X', 'GBPUSD=X', 'AUDUSD=X', 'USDCAD=X', 'NZDUSD=X', 'USDCHF=X', 'EURJPY=X', 'GBPJPY=X', 'AUDJPY=X'])
-timeframe_escolhido = st.radio("Escolha o timeframe:", ['D1', 'W1', 'MN1'])
-porcentagem_media_volatilidade = st.number_input('Digite o percentual da média da volatilidade', min_value = 1, max_value = 100, value = 50)
+# User settings
+num_candles = st.selectbox("Choose the viewing period:", ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y'])
+selected_asset = st.selectbox("Choose the asset:", ['EURUSD=X','USDBRL=X','^BVSP', 'USDJPY=X', 'GBPUSD=X', 'AUDUSD=X', 'USDCAD=X', 'NZDUSD=X', 'USDCHF=X', 'EURJPY=X', 'GBPJPY=X', 'AUDJPY=X'])
+selected_timeframe = st.radio("Choose the timeframe:", ['D1', 'W1', 'MN1'])
+volatility_mean_percentage = st.number_input('Enter the percentage of the volatility mean', min_value=1, max_value=100, value=50)
 
-# Mapeando o timeframe escolhido para o formato correspondente do MetaTrader5
-mapa_timeframes = {'D1': '1d', 'W1': '1wk', 'MN1': '1mo'}
-timeframe_mt5 = mapa_timeframes[timeframe_escolhido]
+# Mapping the chosen timeframe to the corresponding MetaTrader5 format
+timeframe_map = {'D1': '1d', 'W1': '1wk', 'MN1': '1mo'}
+mt5_timeframe = timeframe_map[selected_timeframe]
 
-# Obtendo dados com base nas escolhas do usuário
-dados = obter_dados([ativo_escolhido], num_candles, timeframe_mt5)
-dados['porcentagem_media_volatilidade'] = dados['media_volatilidade'] * porcentagem_media_volatilidade/100
-dados['média da volatilidade + desvio padrão'] = dados['media_volatilidade'] + dados['desvio_padrao_volatilidade']
-dados['média da volatilidade - desvio padrão'] = dados['media_volatilidade'] - dados['desvio_padrao_volatilidade']
-print(dados)
+# Getting data based on user choices
+data = get_data([selected_asset], num_candles, mt5_timeframe)
+data['volatility_mean_percentage'] = data['volatility_mean'] * volatility_mean_percentage / 100
+data['volatility_mean + std_dev'] = data['volatility_mean'] + data['volatility_std_dev']
+data['volatility_mean - std_dev'] = data['volatility_mean'] - data['volatility_std_dev']
+print(data)
 
-# Plotando o gráfico de barras verticais da amplitude
+# Plotting the vertical bar chart of amplitude
 plt.figure(figsize=(10, 6))
-plt.bar(dados.index, dados['volatilidade'], color='blue', alpha=0.7, label='Volatilidade')
+plt.bar(data.index, data['volatility'], color='blue', alpha=0.7, label='Volatility')
 
-# Linhas horizontais
-plt.plot(dados['media_volatilidade'], color='yellow', label='Média da Volatilidade')
-plt.plot(dados['média da volatilidade + desvio padrão'], color='green', linestyle='-', label='Média + Desvio Padrão')
-plt.plot(dados['média da volatilidade - desvio padrão'], color='red', linestyle='-', label='Média - Desvio Padrão')
-plt.plot(dados['porcentagem_media_volatilidade'], color='pink', linestyle='-', label=f'{porcentagem_media_volatilidade}% da Média da Volatilidade')
+# Horizontal lines
+plt.plot(data['volatility_mean'], color='yellow', label='Volatility Mean')
+plt.plot(data['volatility_mean + std_dev'], color='green', linestyle='-', label='Mean + Std Dev')
+plt.plot(data['volatility_mean - std_dev'], color='red', linestyle='-', label='Mean - Std Dev')
+plt.plot(data['volatility_mean_percentage'], color='pink', linestyle='-', label=f'{volatility_mean_percentage}% of Volatility Mean')
 
-plt.title(f"Amplitude do Candlestick - {ativo_escolhido} - {timeframe_escolhido}")
-plt.xlabel("Tempo")
-plt.ylabel("Amplitude do Candlestick")
+plt.title(f"Candlestick Amplitude - {selected_asset} - {selected_timeframe}")
+plt.xlabel("Time")
+plt.ylabel("Candlestick Amplitude")
 plt.legend()
 
-# Passando a figura para st.pyplot()
-st.pyplot(plt.gcf()) 
+# Passing the figure to st.pyplot()
+st.pyplot(plt.gcf())
 
-# Fechar a figura do Matplotlib
+# Closing the Matplotlib figure
 plt.close()
 
-# Exibindo os dados no Streamlit
-st.dataframe(dados)
+# Displaying data in Streamlit
+st.dataframe(data)
